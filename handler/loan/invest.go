@@ -8,6 +8,7 @@ import (
 	"loan-service/pkg/response"
 	"loan-service/pkg/validation"
 	"net/http"
+	"slices"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -18,16 +19,41 @@ func (c Controller) Invest(resp *response.HttpResponse, req *request.HttpRequest
 	dataRequest := InvestLoanRequest{}
 	vars := mux.Vars(req.HttpRequest())
 
-	var loanId uint64
+	var loanId int
 
-	intId, err := strconv.ParseUint(vars["id"], 10, 64)
+	loanId, err := strconv.Atoi(vars["id"])
 
 	if err != nil {
 		resp.Error(http.StatusBadRequest, errors.New("path identifier is not in valid format"))
 		return
 	}
 
-	loanId = intId
+	var existingLoan *model.Loan = searchLoanById(loanId)
+
+	if existingLoan == nil {
+		resp.Error(http.StatusNotFound, errors.New("loan record not found"))
+		return
+	}
+
+	if existingLoan.Status != model.LoanStateApproved {
+		resp.Error(http.StatusNotFound, errors.New("invest can only available if status is approved."))
+		return
+	}
+
+	var totalInvested float64
+	var existingInvestors = []int{}
+
+	for _, investor := range existingLoan.Investors {
+		totalInvested += investor.Amount
+		existingInvestors = append(existingInvestors, investor.InvestorId)
+	}
+
+	maximumAvailableAmount := existingLoan.PrincipalAmount - totalInvested
+
+	if maximumAvailableAmount == 0 {
+		resp.Error(http.StatusBadRequest, errors.New("cannot invest, already reach the limit."))
+		return
+	}
 
 	if err := req.GetFormRequest(&dataRequest); err != nil {
 		switch err.(type) {
@@ -42,33 +68,36 @@ func (c Controller) Invest(resp *response.HttpResponse, req *request.HttpRequest
 		return
 	}
 
+	var maximumInvestAmount string = "lte=" + strconv.FormatFloat(maximumAvailableAmount, 'f', -1, 64)
+
 	formValidation := req.Validation(validation.SchemaRules{
 		"InvestorId": []string{validation.Required, validation.Numeric},
-		"Amount":     []string{validation.Required, validation.Numeric},
+		"Amount":     []string{validation.Required, validation.Numeric, maximumInvestAmount},
 	})
 
 	errorBags, err := formValidation.Validate(dataRequest)
 
-	if err != nil {
-		resp.ErrorWithData(http.StatusUnprocessableEntity, err.Error(), errorBags)
+	if slices.Contains(existingInvestors, dataRequest.InvestorId) {
+		errorBags.Add("investor_id", "investor cannot invest more than one")
+	}
+
+	if err != nil || len(errorBags) > 0 {
+		resp.ErrorWithData(http.StatusUnprocessableEntity, "validation input error", errorBags)
 		return
 	}
 
-	approvedLoan := model.Loan{
-		ID:                 loanId,
-		BorrowerId:         1,
-		PrincipalAmount:    100,
-		ApprovalEvidence:   "",
-		ApprovalEmployeeId: 1,
-		Investors: []model.LoanInvestor{
-			{
-				InvestorId: dataRequest.InvestorId,
-				Amount:     dataRequest.Amount,
-			},
-		},
-		Status: model.LoanStateInvested,
+	existingLoan.Investors = append(existingLoan.Investors, model.LoanInvestor{
+		Id:         len(existingLoan.Investors) + 1,
+		InvestorId: dataRequest.InvestorId,
+		Amount:     dataRequest.Amount,
+	})
+
+	if dataRequest.Amount == maximumAvailableAmount {
+		existingLoan.Status = model.LoanStateInvested
 	}
 
-	resp.Json(http.StatusOK, approvedLoan)
+	Loans[existingLoan.ID-1] = *existingLoan
+
+	resp.Json(http.StatusOK, existingLoan)
 	return
 }

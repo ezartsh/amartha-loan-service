@@ -3,11 +3,13 @@ package loan
 import (
 	"encoding/json"
 	"errors"
+	"loan-service/config"
 	"loan-service/model"
 	"loan-service/pkg/request"
 	"loan-service/pkg/response"
 	"loan-service/pkg/validation"
 	"net/http"
+	"strconv"
 )
 
 func (c Controller) Create(resp *response.HttpResponse, req *request.HttpRequest) {
@@ -24,10 +26,17 @@ func (c Controller) Create(resp *response.HttpResponse, req *request.HttpRequest
 		}
 	}
 
+	// assuming that the roi >= company margin profit
+	// the interest rate value must be (margin profit * 2) at minimum
+
+	var minimumInterestRate string = "gte=" + strconv.FormatFloat((config.Env.CompanyMarginInPercent*2), 'f', -1, 64)
+	var minimumLoanAmount string = "gte=" + strconv.FormatFloat((config.Env.MinimumLoanAmout), 'f', -1, 64)
+	var maximumLoanAmount string = "lte=" + strconv.FormatFloat((config.Env.MaximumLoanAmout), 'f', -1, 64)
+
 	formValidation := req.Validation(validation.SchemaRules{
 		"BorrowerId":      []string{validation.Required, validation.Numeric},
-		"PrincipalAmount": []string{validation.Required, validation.Numeric},
-		"Rate":            []string{validation.Required, validation.Numeric},
+		"PrincipalAmount": []string{validation.Required, validation.Numeric, minimumLoanAmount, maximumLoanAmount},
+		"InterestRate":    []string{validation.Required, validation.Numeric, minimumInterestRate},
 	})
 
 	errorBags, err := formValidation.Validate(dataRequest)
@@ -38,10 +47,15 @@ func (c Controller) Create(resp *response.HttpResponse, req *request.HttpRequest
 	}
 
 	newLoan := model.Loan{
+		ID:              len(Loans) + 1,
 		BorrowerId:      dataRequest.BorrowerId,
 		PrincipalAmount: dataRequest.PrincipalAmount,
+		InterestRate:    dataRequest.InterestRate,
+		Roi:             dataRequest.InterestRate - config.Env.CompanyMarginInPercent,
 		Status:          model.LoanStateProposed,
 	}
+
+	Loans = append(Loans, newLoan)
 
 	resp.Json(http.StatusOK, newLoan)
 	return

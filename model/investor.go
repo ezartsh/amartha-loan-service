@@ -1,5 +1,5 @@
 package model
 
 type Investor struct {
-	ID uint `json:"id"`
+	ID int `json:"id"`
 }

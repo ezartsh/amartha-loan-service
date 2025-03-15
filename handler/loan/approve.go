@@ -21,16 +21,26 @@ func (c Controller) Approve(resp *response.HttpResponse, req *request.HttpReques
 	dataRequest := ApproveLoanRequest{}
 	vars := mux.Vars(req.HttpRequest())
 
-	var loanId uint64
+	var loanId int
 
-	intId, err := strconv.ParseUint(vars["id"], 10, 64)
+	loanId, err := strconv.Atoi(vars["id"])
 
 	if err != nil {
 		resp.Error(http.StatusBadRequest, errors.New("path identifier is not in valid format"))
 		return
 	}
 
-	loanId = intId
+	var existingLoan *model.Loan = searchLoanById(loanId)
+
+	if existingLoan == nil {
+		resp.Error(http.StatusNotFound, errors.New("loan record not found"))
+		return
+	}
+
+	if existingLoan.Status != model.LoanStateProposed {
+		resp.Error(http.StatusNotFound, errors.New("approval can only available when status is proposed."))
+		return
+	}
 
 	if err := req.GetFormRequest(&dataRequest); err != nil {
 		switch err.(type) {
@@ -57,16 +67,13 @@ func (c Controller) Approve(resp *response.HttpResponse, req *request.HttpReques
 		return
 	}
 
-	approvedLoan := model.Loan{
-		ID:                 loanId,
-		BorrowerId:         1,
-		PrincipalAmount:    100,
-		ApprovalEvidence:   dataRequest.EvidencePicture.Filename,
-		ApprovalEmployeeId: 1,
-		ApprovalDate:       &utils.LocalTime{Time: eventTime},
-		Status:             model.LoanStateApproved,
-	}
+	existingLoan.ApprovalEvidence = dataRequest.EvidencePicture.Filename
+	existingLoan.ApprovalEmployeeId = 1
+	existingLoan.ApprovalDate = &utils.LocalTime{Time: eventTime}
+	existingLoan.Status = model.LoanStateApproved
 
-	resp.Json(http.StatusOK, approvedLoan)
+	Loans[existingLoan.ID-1] = *existingLoan
+
+	resp.Json(http.StatusOK, existingLoan)
 	return
 }
