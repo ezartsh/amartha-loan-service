@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -30,4 +32,11 @@ func ConcatPaths(v ...string) (values string) {
 	}
 
 	return values
+}
+
+func TempFileName(name string) string {
+	names := strings.Split(name, ".")
+	randBytes := make([]byte, 16)
+	rand.Read(randBytes)
+	return filepath.Join(strings.ReplaceAll(names[0], "-", "_") + "_" + hex.EncodeToString(randBytes) + "." + names[1])
 }

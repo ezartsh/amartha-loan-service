@@ -7,15 +7,18 @@ import (
 	"loan-service/pkg/request"
 	"loan-service/pkg/response"
 	"loan-service/pkg/validation"
+	"loan-service/utils"
 	"net/http"
 	"slices"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 )
 
 func (c Controller) Invest(resp *response.HttpResponse, req *request.HttpRequest) {
 
+	eventTime := time.Now().In(utils.JakartaTimeLocation)
 	dataRequest := InvestLoanRequest{}
 	vars := mux.Vars(req.HttpRequest())
 
@@ -90,6 +93,8 @@ func (c Controller) Invest(resp *response.HttpResponse, req *request.HttpRequest
 		Id:         len(existingLoan.Investors) + 1,
 		InvestorId: dataRequest.InvestorId,
 		Amount:     dataRequest.Amount,
+		CreatedAt:  utils.LocalTime{Time: eventTime},
+		UpdatedAt:  utils.LocalTime{Time: eventTime},
 	})
 
 	if dataRequest.Amount == maximumAvailableAmount {

@@ -9,8 +9,8 @@ type CreateLoanRequest struct {
 }
 
 type ApproveLoanRequest struct {
-	EmployeeId      int                  `json:"employee_id"`
-	EvidencePicture multipart.FileHeader `json:"evidence_picture"`
+	EmployeeId      int                   `json:"employee_id"`
+	EvidencePicture *multipart.FileHeader `json:"evidence_picture"`
 }
 
 type InvestLoanRequest struct {
@@ -19,6 +19,6 @@ type InvestLoanRequest struct {
 }
 
 type DisburseLoanRequest struct {
-	EmployeeId      int                  `json:"employee_id"`
-	EvidencePicture multipart.FileHeader `json:"evidence_picture"`
+	EmployeeId      int                   `json:"employee_id"`
+	EvidencePicture *multipart.FileHeader `json:"evidence_picture"`
 }

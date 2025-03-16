@@ -8,12 +8,15 @@ import (
 	"loan-service/pkg/request"
 	"loan-service/pkg/response"
 	"loan-service/pkg/validation"
+	"loan-service/utils"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func (c Controller) Create(resp *response.HttpResponse, req *request.HttpRequest) {
 
+	eventTime := time.Now().In(utils.JakartaTimeLocation)
 	dataRequest := CreateLoanRequest{}
 
 	if err := req.GetFormRequest(&dataRequest); err != nil {
@@ -53,10 +56,13 @@ func (c Controller) Create(resp *response.HttpResponse, req *request.HttpRequest
 		InterestRate:    dataRequest.InterestRate,
 		Roi:             dataRequest.InterestRate - config.Env.CompanyMarginInPercent,
 		Status:          model.LoanStateProposed,
+		Investors:       []model.LoanInvestor{},
+		CreatedAt:       utils.LocalTime{Time: eventTime},
+		UpdatedAt:       utils.LocalTime{Time: eventTime},
 	}
 
 	Loans = append(Loans, newLoan)
 
-	resp.Json(http.StatusOK, newLoan)
+	resp.Json(http.StatusCreated, newLoan)
 	return
 }

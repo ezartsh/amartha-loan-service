@@ -3,12 +3,16 @@ package loan
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"loan-service/model"
+	"loan-service/pkg/logger"
 	"loan-service/pkg/request"
 	"loan-service/pkg/response"
 	"loan-service/pkg/validation"
 	"loan-service/utils"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -57,7 +61,7 @@ func (c Controller) Disburse(resp *response.HttpResponse, req *request.HttpReque
 
 	formValidation := req.Validation(validation.SchemaRules{
 		"EmployeeId":      []string{validation.Required, validation.Numeric},
-		"EvidencePicture": []string{validation.Required, validation.File},
+		"EvidencePicture": []string{validation.Required},
 	})
 
 	errorBags, err := formValidation.Validate(dataRequest)
@@ -67,8 +71,39 @@ func (c Controller) Disburse(resp *response.HttpResponse, req *request.HttpReque
 		return
 	}
 
+	file, err := req.HttpRequest().MultipartForm.File["evidence_picture"][0].Open()
+	if err != nil {
+		logger.AppLog.Error(err, "failed to open file from request")
+		resp.Error(http.StatusInternalServerError, err)
+		return
+	}
+
+	dir, err := os.Getwd()
+	if err != nil {
+		logger.AppLog.Error(err, "failed to get os directory")
+		resp.Error(http.StatusInternalServerError, err)
+		return
+	}
+
+	fileLocation := filepath.Join(dir, "upload", utils.TempFileName(dataRequest.EvidencePicture.Filename))
+	targetFile, err := os.OpenFile(fileLocation, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		logger.AppLog.Error(err, "failed to open target directory")
+		resp.Error(http.StatusInternalServerError, err)
+		return
+	}
+	defer targetFile.Close()
+
+	if _, err := io.Copy(targetFile, file); err != nil {
+		logger.AppLog.Error(err, "failed to store the file")
+		resp.Error(http.StatusInternalServerError, err)
+		return
+	}
+
 	existingLoan.Status = model.LoanStateDisbursed
+	existingLoan.DisburseEvidence = fileLocation
 	existingLoan.DisburseDate = &utils.LocalTime{Time: eventTime}
+	existingLoan.UpdatedAt = utils.LocalTime{Time: eventTime}
 	existingLoan.DisburseEmployeeId = 1
 
 	Loans[existingLoan.ID-1] = *existingLoan

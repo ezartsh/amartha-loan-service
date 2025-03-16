@@ -6,7 +6,7 @@ import (
 
 func RegisterRoutes(httpRouter *router.Router) {
 	controller := NewController()
-	httpRouter.Group("/loan", func(route router.GroupRoute) {
+	httpRouter.Group("/loans", func(route router.GroupRoute) {
 		route.Get("/", controller.Index)
 		route.Get("/{id}", controller.GetById)
 		route.Post("/create", controller.Create)

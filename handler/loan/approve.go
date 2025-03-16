@@ -3,12 +3,16 @@ package loan
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"loan-service/model"
+	"loan-service/pkg/logger"
 	"loan-service/pkg/request"
 	"loan-service/pkg/response"
 	"loan-service/pkg/validation"
 	"loan-service/utils"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -67,9 +71,39 @@ func (c Controller) Approve(resp *response.HttpResponse, req *request.HttpReques
 		return
 	}
 
-	existingLoan.ApprovalEvidence = dataRequest.EvidencePicture.Filename
+	file, err := req.HttpRequest().MultipartForm.File["evidence_picture"][0].Open()
+	if err != nil {
+		logger.AppLog.Error(err, "failed to open file from request")
+		resp.Error(http.StatusInternalServerError, err)
+		return
+	}
+
+	dir, err := os.Getwd()
+	if err != nil {
+		logger.AppLog.Error(err, "failed to get os directory")
+		resp.Error(http.StatusInternalServerError, err)
+		return
+	}
+
+	fileLocation := filepath.Join(dir, "upload", utils.TempFileName(dataRequest.EvidencePicture.Filename))
+	targetFile, err := os.OpenFile(fileLocation, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		logger.AppLog.Error(err, "failed to open target directory")
+		resp.Error(http.StatusInternalServerError, err)
+		return
+	}
+	defer targetFile.Close()
+
+	if _, err := io.Copy(targetFile, file); err != nil {
+		logger.AppLog.Error(err, "failed to store the file")
+		resp.Error(http.StatusInternalServerError, err)
+		return
+	}
+
+	existingLoan.ApprovalEvidence = fileLocation
 	existingLoan.ApprovalEmployeeId = 1
 	existingLoan.ApprovalDate = &utils.LocalTime{Time: eventTime}
+	existingLoan.UpdatedAt = utils.LocalTime{Time: eventTime}
 	existingLoan.Status = model.LoanStateApproved
 
 	Loans[existingLoan.ID-1] = *existingLoan

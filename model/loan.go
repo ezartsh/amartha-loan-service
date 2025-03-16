@@ -35,4 +35,6 @@ type Loan struct {
 	DisburseDate       *utils.LocalTime `json:"disburse_date"`
 	Investors          []LoanInvestor   `json:"loan_investors"`
 	Status             LoanState        `json:"status"`
+	CreatedAt          utils.LocalTime  `json:"created_at"`
+	UpdatedAt          utils.LocalTime  `json:"updated_at"`
 }
