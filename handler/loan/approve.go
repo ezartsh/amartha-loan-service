@@ -85,7 +85,7 @@ func (c Controller) Approve(resp *response.HttpResponse, req *request.HttpReques
 		return
 	}
 
-	fileLocation := filepath.Join(dir, "upload", utils.TempFileName(dataRequest.EvidencePicture.Filename))
+	fileLocation := filepath.Join(dir, "upload", utils.HashFileName(dataRequest.EvidencePicture.Filename))
 	targetFile, err := os.OpenFile(fileLocation, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		logger.AppLog.Error(err, "failed to open target directory")
@@ -100,8 +100,8 @@ func (c Controller) Approve(resp *response.HttpResponse, req *request.HttpReques
 		return
 	}
 
-	existingLoan.ApprovalEvidence = fileLocation
-	existingLoan.ApprovalEmployeeId = 1
+	existingLoan.ApprovalEvidence = &fileLocation
+	existingLoan.ApprovalEmployeeId = &dataRequest.EmployeeId
 	existingLoan.ApprovalDate = &utils.LocalTime{Time: eventTime}
 	existingLoan.UpdatedAt = utils.LocalTime{Time: eventTime}
 	existingLoan.Status = model.LoanStateApproved

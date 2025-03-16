@@ -30,6 +30,7 @@ type EnvConfig struct {
 	CompanyMarginInPercent float64
 	MinimumLoanAmout       float64
 	MaximumLoanAmout       float64
+	Mail                   Mail
 }
 
 // Env is global var for EnvType
@@ -74,10 +75,15 @@ func Init() (results map[string]any, errorBags []EnvValidationError, err error) 
 		})
 	}
 
+	mailConfig := newMailConfig()
+	mailConfig.ValidateRequired(&errorBags)
+
 	if len(errorBags) > 0 {
 		err = errors.New("config validation failed")
 		return
 	}
+
+	Env.Mail = mailConfig
 
 	results = map[string]any{
 		envVarHttpPort:               Env.HTTPPort,
@@ -85,6 +91,11 @@ func Init() (results map[string]any, errorBags []EnvValidationError, err error) 
 		envVarCompanyMarginInPercent: Env.CompanyMarginInPercent,
 		envVarMinimumLoanAmount:      Env.MinimumLoanAmout,
 		envVarMaximumLoanAmount:      Env.MaximumLoanAmout,
+		envVarMailHost:               Env.Mail.host,
+		envVarMailPort:               Env.Mail.port,
+		envVarMailUsername:           Env.Mail.username,
+		envVarMailPassword:           Env.Mail.password,
+		envVarMailEmailSender:        Env.Mail.emailSender,
 	}
 
 	return

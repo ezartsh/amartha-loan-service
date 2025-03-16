@@ -22,19 +22,20 @@ type Borrower struct {
 }
 
 type Loan struct {
-	ID                 int              `json:"id"`
-	BorrowerId         int              `json:"borrower_id"`
-	PrincipalAmount    float64          `json:"principal_amount"`
-	InterestRate       float64          `json:"interest_rate"`
-	Roi                float64          `json:"roi"`
-	ApprovalEvidence   string           `json:"approval_evidence"`
-	ApprovalEmployeeId int              `json:"approval_employee_id"`
-	ApprovalDate       *utils.LocalTime `json:"approval_date"`
-	DisburseEvidence   string           `json:"disburse_evidence"`
-	DisburseEmployeeId int              `json:"disburse_employee_id"`
-	DisburseDate       *utils.LocalTime `json:"disburse_date"`
-	Investors          []LoanInvestor   `json:"loan_investors"`
-	Status             LoanState        `json:"status"`
-	CreatedAt          utils.LocalTime  `json:"created_at"`
-	UpdatedAt          utils.LocalTime  `json:"updated_at"`
+	ID                    int              `json:"id"`
+	BorrowerId            int              `json:"borrower_id"`
+	PrincipalAmount       float64          `json:"principal_amount"`
+	InterestRate          float64          `json:"interest_rate"`
+	Roi                   float64          `json:"roi"`
+	ApprovalEvidence      *string          `json:"approval_evidence"`
+	ApprovalEmployeeId    *int             `json:"approval_employee_id"`
+	ApprovalDate          *utils.LocalTime `json:"approval_date"`
+	AgreementLetter       *string          `json:"agreement_letter"`
+	SignedAgreementLetter *string          `json:"signed_agreement_letter"`
+	DisburseEmployeeId    *int             `json:"disburse_employee_id"`
+	DisburseDate          *utils.LocalTime `json:"disburse_date"`
+	Investors             []LoanInvestor   `json:"loan_investors"`
+	Status                LoanState        `json:"status"`
+	CreatedAt             utils.LocalTime  `json:"created_at"`
+	UpdatedAt             utils.LocalTime  `json:"updated_at"`
 }

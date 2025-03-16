@@ -61,7 +61,7 @@ func (c Controller) Create(resp *response.HttpResponse, req *request.HttpRequest
 		UpdatedAt:       utils.LocalTime{Time: eventTime},
 	}
 
-	Loans = append(Loans, newLoan)
+	Loans = append([]model.Loan{newLoan}, Loans...)
 
 	resp.Json(http.StatusCreated, newLoan)
 	return

@@ -60,8 +60,8 @@ func (c Controller) Disburse(resp *response.HttpResponse, req *request.HttpReque
 	}
 
 	formValidation := req.Validation(validation.SchemaRules{
-		"EmployeeId":      []string{validation.Required, validation.Numeric},
-		"EvidencePicture": []string{validation.Required},
+		"EmployeeId":            []string{validation.Required, validation.Numeric},
+		"SignedAgreementLetter": []string{validation.Required},
 	})
 
 	errorBags, err := formValidation.Validate(dataRequest)
@@ -71,7 +71,7 @@ func (c Controller) Disburse(resp *response.HttpResponse, req *request.HttpReque
 		return
 	}
 
-	file, err := req.HttpRequest().MultipartForm.File["evidence_picture"][0].Open()
+	file, err := req.HttpRequest().MultipartForm.File["signed_agreement_letter"][0].Open()
 	if err != nil {
 		logger.AppLog.Error(err, "failed to open file from request")
 		resp.Error(http.StatusInternalServerError, err)
@@ -85,7 +85,7 @@ func (c Controller) Disburse(resp *response.HttpResponse, req *request.HttpReque
 		return
 	}
 
-	fileLocation := filepath.Join(dir, "upload", utils.TempFileName(dataRequest.EvidencePicture.Filename))
+	fileLocation := filepath.Join(dir, "upload", utils.HashFileName(dataRequest.SignedAgreementLetter.Filename))
 	targetFile, err := os.OpenFile(fileLocation, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		logger.AppLog.Error(err, "failed to open target directory")
@@ -100,11 +100,11 @@ func (c Controller) Disburse(resp *response.HttpResponse, req *request.HttpReque
 		return
 	}
 
-	existingLoan.Status = model.LoanStateDisbursed
-	existingLoan.DisburseEvidence = fileLocation
+	existingLoan.DisburseEmployeeId = &dataRequest.EmployeeId
 	existingLoan.DisburseDate = &utils.LocalTime{Time: eventTime}
+	existingLoan.SignedAgreementLetter = &fileLocation
 	existingLoan.UpdatedAt = utils.LocalTime{Time: eventTime}
-	existingLoan.DisburseEmployeeId = 1
+	existingLoan.Status = model.LoanStateDisbursed
 
 	Loans[existingLoan.ID-1] = *existingLoan
 

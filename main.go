@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"loan-service/config"
 	"loan-service/pkg/logger"
+	"loan-service/pkg/mail"
 	"loan-service/routes"
 	"net/http"
 	"os"
@@ -31,8 +32,10 @@ func main() {
 		logger.AppLog.DebugWithVariables(configResults, "[Env] Setup Configuration Value")
 	}
 
+	mailHandler := mail.NewMail(mail.NewMailTrap())
+
 	logger.AppLog.Info("Initiate route.")
-	routeHandler := routes.WebInit()
+	routeHandler := routes.WebInit(mailHandler)
 
 	logger.AppLog.Infof("Running service on port %d.", config.Env.HTTPPort)
 

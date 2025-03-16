@@ -3,17 +3,23 @@ package loan
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"loan-service/config"
 	"loan-service/model"
+	"loan-service/pkg/logger"
 	"loan-service/pkg/request"
 	"loan-service/pkg/response"
 	"loan-service/pkg/validation"
 	"loan-service/utils"
 	"net/http"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/jung-kurt/gofpdf"
 )
 
 func (c Controller) Invest(resp *response.HttpResponse, req *request.HttpRequest) {
@@ -97,11 +103,112 @@ func (c Controller) Invest(resp *response.HttpResponse, req *request.HttpRequest
 		UpdatedAt:  utils.LocalTime{Time: eventTime},
 	})
 
+	dir, err := os.Getwd()
+	if err != nil {
+		logger.AppLog.Error(err, "failed to get os directory")
+		resp.Error(http.StatusInternalServerError, err)
+		return
+	}
+
 	if dataRequest.Amount == maximumAvailableAmount {
 		existingLoan.Status = model.LoanStateInvested
+
+		fileLocation := filepath.Join(dir, "upload", utils.HashFileName(fmt.Sprintf("agreement_letter_loan_%d.pdf", existingLoan.ID)))
+
+		pdf := gofpdf.New("P", "mm", "A4", "")
+		pdf.AddPage()
+		pdf.SetFont("Arial", "B", 16)
+		pdf.Text(40, 20, fmt.Sprintf("Agreement Letter Loan id: %d", existingLoan.ID))
+		pdf.Text(40, 40, "Content of Agreement Letter.")
+
+		existingLoan.AgreementLetter = &fileLocation
+
+		err := pdf.OutputFileAndClose(fileLocation)
+		if err != nil {
+			resp.Error(http.StatusInternalServerError, err)
+			return
+		}
+
+		for _, investor := range existingLoan.Investors {
+			receipient := fmt.Sprintf("investor_%d@example.com", investor.InvestorId)
+
+			go func() {
+				if err := c.mailHandler.Send(
+					receipient,
+					fmt.Sprintf("Agreement Letter Loan id : %d", existingLoan.ID),
+					fmt.Sprintf(`
+					<html>
+						<body>
+							<h1>Dear Investor %d,</h1>
+							<p>Here is the <a href="%s" target="_blank">link</a> for the agreement letter.</p>
+							<p>Thanks,<br>Company</p>
+						</body>
+					</html>
+				`, investor.InvestorId, fmt.Sprintf("http://localhost:%d/loans/%d/agreement-letter", config.Env.HTTPPort, existingLoan.ID)),
+				); err != nil {
+					logger.AppLog.Errorf(err, "failed to send email to %s", receipient)
+					return
+				}
+				logger.AppLog.Debugf("email successfuly sent to %s", receipient)
+			}()
+		}
 	}
 
 	Loans[existingLoan.ID-1] = *existingLoan
+
+	resp.Json(http.StatusOK, existingLoan)
+	return
+}
+
+func (c Controller) ResendEmail(resp *response.HttpResponse, req *request.HttpRequest) {
+
+	vars := mux.Vars(req.HttpRequest())
+
+	var loanId int
+
+	loanId, err := strconv.Atoi(vars["id"])
+
+	if err != nil {
+		resp.Error(http.StatusBadRequest, errors.New("path identifier is not in valid format"))
+		return
+	}
+
+	var existingLoan *model.Loan = searchLoanById(loanId)
+
+	if existingLoan == nil {
+		resp.Error(http.StatusNotFound, errors.New("loan record not found"))
+		return
+	}
+
+	if existingLoan.Status != model.LoanStateInvested {
+		resp.Error(http.StatusNotFound, errors.New("resent can only available if status is invested."))
+		return
+	}
+
+	for _, investor := range existingLoan.Investors {
+		receipient := fmt.Sprintf("investor_%d@example.com", investor.InvestorId)
+
+		go func() {
+			if err := c.mailHandler.Send(
+				receipient,
+				fmt.Sprintf("Agreement Letter Loan id : %d", existingLoan.ID),
+				fmt.Sprintf(`
+					<html>
+						<body>
+							<h1>Dear Investor %d,</h1>
+							<p>Here is the <a href="%s" target="_blank">link</a> for the agreement letter.</p>
+							<p>Thanks,<br>Company</p>
+						</body>
+					</html>
+				`, investor.InvestorId, fmt.Sprintf("http://localhost:%d/loans/%d/agreement-letter", config.Env.HTTPPort, existingLoan.ID)),
+			); err != nil {
+				logger.AppLog.Errorf(err, "failed to send email to %s", receipient)
+				return
+			}
+
+			logger.AppLog.Debugf("email successfuly sent to %s", receipient)
+		}()
+	}
 
 	resp.Json(http.StatusOK, existingLoan)
 	return

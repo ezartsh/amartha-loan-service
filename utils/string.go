@@ -34,7 +34,7 @@ func ConcatPaths(v ...string) (values string) {
 	return values
 }
 
-func TempFileName(name string) string {
+func HashFileName(name string) string {
 	names := strings.Split(name, ".")
 	randBytes := make([]byte, 16)
 	rand.Read(randBytes)

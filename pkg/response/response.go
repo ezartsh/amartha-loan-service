@@ -35,3 +35,7 @@ func (r HttpResponse) Error(code int, message error) {
 func (r HttpResponse) ErrorWithData(code int, message string, body interface{}) {
 	r.Json(code, map[string]interface{}{"message": message, "errors": body})
 }
+
+func (r HttpResponse) Writer() http.ResponseWriter {
+	return r.w
+}

@@ -5,7 +5,8 @@
 This repository contains a REST API to handle loan system.
 
 ## Prerequisite
-Make sure Go binary installed on local system. Visit this link ([Go Installation](https://go.dev/doc/install)) and follow the instruction to install Go.
+- `Go` Make sure Go binary installed on local system. Visit this link [Go Installation](https://go.dev/doc/install) and follow the instruction to install Go.
+- `Mailtrap` Create [Mailtrap](https://mailtrap.io) account to enable sending mail feature.
 
 ## Installation
 ### Clone the project
@@ -47,9 +48,14 @@ $ cp .env.example .env
 * `COMPANY_MARGIN_IN_PERCENT` : Percentage margin profit that company gain for each loan transaction. (e.g `2`) means that company margin profit are 2%
 * `MINIMUM_LOAN_AMOUNT` : Minimum amount of money (IDR) that borrower can request.
 * `MAXIMUM_LOAN_AMOUNT` : Maximum amount of money (IDR) that borrower can request.
+* `MAIL_HOST` : Mail host.
+* `MAIL_PORT` : Mail port.
+* `MAIL_USERNAME` : Mail username.
+* `MAIL_PASSWORD` : Mail password.
+* `MAIL_EMAIL_SENDER` : Email sender.
 
 For this example project, there is some rules and validation when setting the configuration :
--  `COMPANY_MARGIN_IN_PERCENT` value can not be lower than 1%. Assuming that 1% is the minimum margin profit for the company.
+- `COMPANY_MARGIN_IN_PERCENT` value can not be lower than 1%. Assuming that 1% is the minimum margin profit for the company.
 - `MINIMUM_LOAN_AMOUNT` value can not be lower than Rp. 10.000 
 - `MAXIMUM_LOAN_AMOUNT` value must be greater than `MINIMUM_LOAN_AMOUNT`
 ---

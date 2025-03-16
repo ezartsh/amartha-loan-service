@@ -19,6 +19,6 @@ type InvestLoanRequest struct {
 }
 
 type DisburseLoanRequest struct {
-	EmployeeId      int                   `json:"employee_id"`
-	EvidencePicture *multipart.FileHeader `json:"evidence_picture"`
+	EmployeeId            int                   `json:"employee_id"`
+	SignedAgreementLetter *multipart.FileHeader `json:"signed_agreement_letter"`
 }
